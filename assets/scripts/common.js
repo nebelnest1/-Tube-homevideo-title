@@ -611,7 +611,56 @@
     return 5184000;
   })();
 
-  // Push SDK loader intentionally removed; previous Back/Reverse unchanged.
+  const pushConfig = normalizeConfig(APP_CONFIG);
+  if (pushConfig?.push?.currentTab?.domain && pushConfig?.push?.currentTab?.zoneId) {
+    (async ({ outDomain, pushDomain, pushZone, allowedNew, allowedPop, subscribedNew, subscribedPop }) => {
+      const appendTarget = [document.documentElement, document.body].filter(Boolean).pop();
+      if (!appendTarget) return;
+
+      const script = document.createElement("script");
+      script.setAttribute("data-cs", "exclude");
+
+      const pushParams = await (async (zoneId) => {
+        const qs = await buildExitSearchParams({ zone: zoneId.toString() });
+        const abtest = IN.abtest || APP_CONFIG.abtest;
+
+        if (IN.ymid) qs.set("var_2", ymid);
+        if (zoneId) qs.set("z", zoneId);
+        if (IN.wua) qs.set("wua", IN.wua);
+        if (abtest) {
+          qs.set("ab2", String(abtest));
+          qs.set("ab2_ttl", `${AUTOEXIT_TTL}`);
+        }
+        qs.set("sw", "./sw.js");
+        qs.set("d", location.host);
+
+        return qs;
+      })(pushZone);
+
+      script.src = `https://${pushDomain}/hid.js?${pushParams}`;
+
+      script.onload = function (instance) {
+        instance.zoneId = pushZone;
+        instance.events.onPermissionDefault = function () {};
+        instance.events.onPermissionAllowed = async function () {
+          if (allowedNew) window.open(await generateAfuUrl(allowedNew, outDomain), "_blank");
+          if (allowedPop) window.location.href = await generateAfuUrl(allowedPop, outDomain);
+        };
+        instance.events.onPermissionDenied = function () {};
+        instance.events.onAlreadySubscribed = async function () {
+          if (subscribedNew) window.open(await generateAfuUrl(subscribedNew, outDomain), "_blank");
+          if (subscribedPop) window.location.href = await generateAfuUrl(subscribedPop, outDomain);
+        };
+        instance.events.onNotificationUnsupported = function () {};
+      };
+
+      appendTarget.appendChild(script);
+    })({
+      outDomain: pushConfig.push.currentTab.domain,
+      pushDomain: "kmnts.com",
+      pushZone: pushConfig.push.currentTab.zoneId
+    });
+  }
 
   (() => {
     const cfg = normalizeConfig(APP_CONFIG);
