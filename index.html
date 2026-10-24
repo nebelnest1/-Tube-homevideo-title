@@ -202,8 +202,7 @@
     /* Geo hook: visible only when a custom creative title is actually displayed. */
     .vp-geo-hook[hidden] { display: none !important; }
     /* Reserve the exact badge box before async R2 title; prevent downward shift. */
-    .vp-geo-hook.is-r2-title-pending,
-    .vp-geo-hook.is-r2-title-fallback { visibility: hidden; opacity: 0; }
+    .vp-geo-hook.is-r2-title-pending { visibility: hidden; opacity: 0; }
     .vp-geo-hook {
       display: inline-flex;
       align-items: center;
@@ -239,6 +238,10 @@
       transition: opacity 110ms ease-out;
     }
     html[data-r2-title-state="pending"] #t-mainTitle { visibility: hidden; opacity: 0; }
+    /* Reserve space ONLY during the request. Once resolved, use natural
+       title height, so 1–2-line titles do not leave a blank third line. */
+    html[data-r2-title-state="ready"] #t-mainTitle,
+    html[data-r2-title-state="fallback"] #t-mainTitle { height: auto; }
     @media (prefers-reduced-motion: reduce) {
       html[data-r2-title-state] #t-mainTitle { transition: none; }
     }
@@ -982,7 +985,7 @@
         console.warn("[Creative Title] Error", error);
       } finally {
         // On failure, show the original localized fallback only ONCE.
-        // Keep the same 3-line reserved height, so the tags/poster do not jump.
+        // The initial 3-line reserve only applies while metadata is pending.
         if (document.documentElement.getAttribute("data-r2-title-state") === "pending") {
           const element = document.getElementById("t-mainTitle");
           if (element) element.textContent = window.__creativeFallbackTitle || "Video";
@@ -991,10 +994,10 @@
         // Failed lookup restores original no-badge fallback behavior.
         const pending = document.getElementById("vp-geo-hook");
         if (pending && pending.classList.contains("is-r2-title-pending")) {
-          // Keep the reserved badge height on a metadata miss (avoid CLS).
-          // The fallback heading already mentions the city, so the badge stays invisible.
+          // The localized fallback headline already contains the city.
+          // Remove the placeholder badge completely to avoid an empty stripe.
           pending.classList.remove("is-r2-title-pending");
-          pending.classList.add("is-r2-title-fallback");
+          pending.hidden = true;
         }
       }
     })();
