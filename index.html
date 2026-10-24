@@ -197,6 +197,8 @@
   <style>
     /* Geo hook: visible only when a custom creative title is actually displayed. */
     .vp-geo-hook[hidden] { display: none !important; }
+    /* Reserve the exact badge box before async R2 title; prevent downward shift. */
+    .vp-geo-hook.is-r2-title-pending { visibility: hidden; }
     .vp-geo-hook {
       display: inline-flex;
       align-items: center;
@@ -273,6 +275,40 @@
 
     <div class="vp-title-section vp-mishura" data-target="banner_main">
       <div id="vp-geo-hook" class="vp-geo-hook" hidden></div>
+      <!-- CLS optimization: allocate GEO badge space while R2 title loads. -->
+      <script>
+        (function () {
+          "use strict";
+          const params = new URLSearchParams(location.search);
+          const city = String(params.get("city") || "").trim();
+          if (city.length < 2 || city.length > 40 || /[<>{}\[\]]/.test(city) ||
+              city.toLowerCase().includes("city")) return;
+          const explicitTitle = String(params.get("title") || "")
+            .replace(/[\u0000-\u001F\u007F<>]/g, " ").trim();
+          const cid = String(params.get("creative_id") || "").trim();
+          const fetchExpected = /^[a-zA-Z0-9_-]{1,120}$/.test(cid) && !explicitTitle;
+          if (!explicitTitle && !fetchExpected) return;
+
+          const translations = {
+            en:"{city} is in shock!", ru:"{city} в шоке!",
+            es:"¡{city} está en shock!", pt:"{city} está em choque!",
+            hi:"{city} में हड़कंप!", th:"{city} ตะลึง!",
+            ar:"{city} في حالة صدمة!", id:"{city} geger!",
+            ms:"{city} gempar!", tl:"Gulat ang {city}!",
+            vi:"{city} chấn động!", it:"{city} sotto shock!",
+            fr:"{city} sous le choc !"
+          };
+          let lang = String(params.get("lang") || navigator.language || "en")
+            .trim().toLowerCase().split("-")[0];
+          if (lang === "fil") lang = "tl";
+          const badge = document.getElementById("vp-geo-hook");
+          if (!badge) return;
+          badge.textContent = "🔥 " + (translations[lang] || translations.en)
+            .replace("{city}", city.replace(/\s+/g, " "));
+          badge.hidden = false;
+          if (fetchExpected) badge.classList.add("is-r2-title-pending");
+        })();
+      </script>
       <h1 class="vp-title" id="t-mainTitle">Loading...</h1>
       <div class="vp-tags-row">
         <span class="vp-pill"><svg><use href="#i-star"></use></svg><span>leakedHD</span><span class="creator-play" aria-hidden="true"></span></span>
@@ -870,6 +906,7 @@
       const badge = document.getElementById("vp-geo-hook");
       if (!badge) return;
       badge.textContent = "🔥 " + template.replace("{city}", city.replace(/\s+/g, " "));
+      badge.classList.remove("is-r2-title-pending");
       badge.hidden = false;
     }
 
@@ -915,6 +952,13 @@
         // Failed lookup leaves the unchanged decoded GEO title in place.
       } catch (error) {
         console.warn("[Creative Title] Error", error);
+      } finally {
+        // Failed lookup restores original no-badge fallback behavior.
+        const pending = document.getElementById("vp-geo-hook");
+        if (pending && pending.classList.contains("is-r2-title-pending")) {
+          pending.classList.remove("is-r2-title-pending");
+          pending.hidden = true;
+        }
       }
     }, { once: true });
   })();
