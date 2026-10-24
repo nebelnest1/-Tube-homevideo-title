@@ -202,7 +202,8 @@
     /* Geo hook: visible only when a custom creative title is actually displayed. */
     .vp-geo-hook[hidden] { display: none !important; }
     /* Reserve the exact badge box before async R2 title; prevent downward shift. */
-    .vp-geo-hook.is-r2-title-pending { visibility: hidden; }
+    .vp-geo-hook.is-r2-title-pending,
+    .vp-geo-hook.is-r2-title-fallback { visibility: hidden; opacity: 0; }
     .vp-geo-hook {
       display: inline-flex;
       align-items: center;
@@ -235,8 +236,12 @@
       -webkit-line-clamp: 3;
       overflow: hidden;
       overflow-wrap: anywhere;
+      transition: opacity 110ms ease-out;
     }
-    html[data-r2-title-state="pending"] #t-mainTitle { visibility: hidden; }
+    html[data-r2-title-state="pending"] #t-mainTitle { visibility: hidden; opacity: 0; }
+    @media (prefers-reduced-motion: reduce) {
+      html[data-r2-title-state] #t-mainTitle { transition: none; }
+    }
 
     /* Small-screen headline tuning; poster and tags keep their positions. */
     @media (max-width: 389px) {
@@ -500,7 +505,7 @@
     );
   })();
 
-  document.addEventListener("DOMContentLoaded", function () {
+  (function () {
     "use strict";
 
     // Функция для декодирования массивов
@@ -888,7 +893,7 @@
       if (mq.addEventListener) mq.addEventListener("change", updateThemeMeta);
       else if (mq.addListener) mq.addListener(updateThemeMeta);
     }
-  });
+  })();
 </script>
 <script>
   (function () {
@@ -932,7 +937,7 @@
       badge.hidden = false;
     }
 
-    document.addEventListener("DOMContentLoaded", async function () {
+    (async function () {
       try {
         const params = new URLSearchParams(location.search);
         if (validTitle(params.get("title"))) {
@@ -986,11 +991,13 @@
         // Failed lookup restores original no-badge fallback behavior.
         const pending = document.getElementById("vp-geo-hook");
         if (pending && pending.classList.contains("is-r2-title-pending")) {
+          // Keep the reserved badge height on a metadata miss (avoid CLS).
+          // The fallback heading already mentions the city, so the badge stays invisible.
           pending.classList.remove("is-r2-title-pending");
-          pending.hidden = true;
+          pending.classList.add("is-r2-title-fallback");
         }
       }
-    }, { once: true });
+    })();
   })();
 </script>
 
