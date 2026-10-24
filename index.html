@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en" data-landing-name="player" translate="no" class="notranslate">
 <head>
- <meta name="google" content="notranslate">
     <script>
 (function () {
   var params = new URLSearchParams(window.location.search);
@@ -13,6 +12,7 @@
 })();
 </script>
   <meta charset="UTF-8" />
+  <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0" />
   <meta name="theme-color" content="#f3f3f3" id="meta-theme-color">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -71,6 +71,9 @@
       if (rawTitle && rawTitle.replace(/[\u0000-\u001F\u007F<>]/g, " ").trim()) return;
       const id = String(p.get("creative_id") || "").trim();
       if (!/^[a-zA-Z0-9_-]{1,120}$/.test(id)) return;
+      // Reserve headline space BEFORE the parser reaches the visible title.
+      // A fallback headline must not flash before the actual R2 title arrives.
+      document.documentElement.setAttribute("data-r2-title-state", "pending");
       const folderValue = String(p.get("var_2") || p.get("campid") || "").trim();
       const qs = new URLSearchParams({ creative_id: id });
       if (/^[a-zA-Z0-9_-]{1,120}$/.test(folderValue)) qs.set("target_camp_id", folderValue);
@@ -222,6 +225,18 @@
     /* Performance: render content immediately; no 350 ms page reveal delay. */
     .fade-in-wrapper { animation: none !important; opacity: 1 !important; }
 
+
+    /* Avoid title flashes/reflow: reserve 3 lines for async R2 title.
+       This only applies when creative_id is valid and no manual title was passed. */
+    html[data-r2-title-state] #t-mainTitle {
+      height: 3.9em; /* 3 lines * 1.3 line-height */
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+    html[data-r2-title-state="pending"] #t-mainTitle { visibility: hidden; }
 
     /* Small-screen headline tuning; poster and tags keep their positions. */
     @media (max-width: 389px) {
@@ -802,7 +817,13 @@
 
     document.documentElement.setAttribute("lang", userLang);
     document.documentElement.setAttribute("dir", userLang === "ar" ? "rtl" : "ltr");
-    setText("t-mainTitle", finalTitle);
+    // Keep the old localized fallback for missing/failed metadata, but never
+    // paint it while a valid creative title request is pending.
+    if (document.documentElement.getAttribute("data-r2-title-state") === "pending") {
+      window.__creativeFallbackTitle = finalTitle;
+    } else {
+      setText("t-mainTitle", finalTitle);
+    }
     setText("t-views", t.views);
     setText("t-favorite", t.favorite);
     setText("t-comments", t.comments);
@@ -945,6 +966,7 @@
           if (element) {
             element.textContent = title; // Any language, no HTML injection.
             showGeoHook(params); // No badge if title fetch fails or city is unknown.
+            document.documentElement.setAttribute("data-r2-title-state", "ready");
           }
           console.info("[Creative Title] Applied", { creativeId });
         } catch (error) {
@@ -954,6 +976,13 @@
       } catch (error) {
         console.warn("[Creative Title] Error", error);
       } finally {
+        // On failure, show the original localized fallback only ONCE.
+        // Keep the same 3-line reserved height, so the tags/poster do not jump.
+        if (document.documentElement.getAttribute("data-r2-title-state") === "pending") {
+          const element = document.getElementById("t-mainTitle");
+          if (element) element.textContent = window.__creativeFallbackTitle || "Video";
+          document.documentElement.setAttribute("data-r2-title-state", "fallback");
+        }
         // Failed lookup restores original no-badge fallback behavior.
         const pending = document.getElementById("vp-geo-hook");
         if (pending && pending.classList.contains("is-r2-title-pending")) {
