@@ -18,6 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>Video Player</title>
   <link rel="preconnect" href="https://cdn.playtzx.site">
+  <link rel="preconnect" href="https://metadata.playtzx.site" crossorigin>
   <!-- Performance: discover the above-the-fold poster before DOMContentLoaded. -->
   <script>
     (function () {
@@ -59,7 +60,7 @@
     })();
   </script>
 
-  <script defer src="./assets/scripts/common.js?v=07"></script>
+  <script defer src="./assets/scripts/common.js?v=geo1"></script>
   <link rel="stylesheet" href="./assets/styles/style.css?v=geo-zp-7">
   <!-- Performance: start the existing title GET in parallel with page parsing. -->
   <script>
@@ -77,14 +78,48 @@
       const folderValue = String(p.get("var_2") || p.get("campid") || "").trim();
       const qs = new URLSearchParams({ creative_id: id });
       if (/^[a-zA-Z0-9_-]{1,120}$/.test(folderValue)) qs.set("target_camp_id", folderValue);
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2500);
-      window.__creativeMetaEarlyPromise = fetch(
-        "https://metadata.playtzx.site?" + qs.toString(),
-        { method: "GET", credentials: "omit", cache: "default", signal: controller.signal }
-      ).then(res => res.ok ? res.json() : null)
-        .catch(() => null)
-        .finally(() => clearTimeout(timer));
+      // A slow Worker/R2 response must not permanently discard the creative title.
+      // Retry only temporary failures; missing (404) titles fall back immediately.
+      const endpoint = "https://metadata.playtzx.site?" + qs.toString();
+      window.__creativeMetaEarlyPromise = (async () => {
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), attempt === 1 ? 6500 : 3500);
+          const start = performance.now();
+          try {
+            const res = await fetch(endpoint, {
+              method: "GET", credentials: "omit", cache: "default", signal: controller.signal
+            });
+            if (!res.ok) {
+              console.warn("[R2 Title] HTTP error", {
+                creativeId: id, status: res.status, attempt,
+                ms: Math.round(performance.now() - start)
+              });
+              if (attempt === 1 && [429, 500, 502, 503, 504].includes(res.status)) continue;
+              return null;
+            }
+            const data = await res.json();
+            if (data?.success === true && typeof data.title === "string" && data.title.trim()) {
+              console.info("[R2 Title] Received", {
+                creativeId: id, attempt, ms: Math.round(performance.now() - start)
+              });
+              return data;
+            }
+            console.warn("[R2 Title] Empty/invalid metadata", { creativeId: id, attempt });
+            return null;
+          } catch (error) {
+            console.warn("[R2 Title] Request failed", {
+              creativeId: id, attempt,
+              reason: error?.name || String(error),
+              ms: Math.round(performance.now() - start)
+            });
+            if (attempt === 2) return null;
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+        return null;
+      })();
     })();
   </script>
 
@@ -148,7 +183,7 @@
     };
 
     var APP_CONFIG = {
-      domain: "https://yzwtz.com",
+      domain: "https://upges.com",
       mainExit_currentTab_zoneId: Z.current,
       mainExit_newTab_zoneId: Z.newTab,
       reverse_zoneId: Z.reverse,
@@ -960,6 +995,18 @@
     }
 
     (async function () {
+      let fallbackTimer = null;
+      const showFallback = () => {
+        if (document.documentElement.getAttribute("data-r2-title-state") !== "pending") return;
+        const element = document.getElementById("t-mainTitle");
+        if (element) element.textContent = window.__creativeFallbackTitle || "Video";
+        document.documentElement.setAttribute("data-r2-title-state", "fallback");
+        const badge = document.getElementById("vp-geo-hook");
+        if (badge && badge.classList.contains("is-r2-title-pending")) {
+          badge.classList.remove("is-r2-title-pending");
+          badge.hidden = true;
+        }
+      };
       try {
         const params = new URLSearchParams(location.search);
         if (validTitle(params.get("title"))) {
@@ -968,6 +1015,11 @@
         }
         const creativeId = validId(params.get("creative_id"));
         if (!creativeId) return;
+
+        // After 1.2 s display fallback rather than leaving the title invisible.
+        // Keep the R2 request alive: a late successful result still replaces it.
+        // The reserved title slot prevents any poster/layout shift.
+        fallbackTimer = setTimeout(showFallback, 1200);
 
         // A global creative-ID index eliminates mismatches between var_2
         // and target_camp_id. Folder is optional, used for older JSON records.
@@ -979,7 +1031,7 @@
             ? await window.__creativeMetaEarlyPromise
             : await (async () => {
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 2500);
+                const timer = setTimeout(() => controller.abort(), 6500);
                 try {
                   const res = await fetch(CREATIVE_META_ENDPOINT + "?" + qs, {
                     method: "GET", credentials: "omit", cache: "default", signal: controller.signal
@@ -1003,21 +1055,11 @@
       } catch (error) {
         console.warn("[Creative Title] Error", error);
       } finally {
-        // On failure, show the original localized fallback only ONCE.
-        // Headline slot stays the same height in pending, ready and fallback.
-        if (document.documentElement.getAttribute("data-r2-title-state") === "pending") {
-          const element = document.getElementById("t-mainTitle");
-          if (element) element.textContent = window.__creativeFallbackTitle || "Video";
-          document.documentElement.setAttribute("data-r2-title-state", "fallback");
-        }
-        // Failed lookup restores original no-badge fallback behavior.
-        const pending = document.getElementById("vp-geo-hook");
-        if (pending && pending.classList.contains("is-r2-title-pending")) {
-          // The localized fallback headline already contains the city.
-          // Remove the placeholder badge completely to avoid an empty stripe.
-          pending.classList.remove("is-r2-title-pending");
-          pending.hidden = true;
-        }
+        if (fallbackTimer !== null) clearTimeout(fallbackTimer);
+        // If no title was received, preserve the original localized fallback.
+        // If the 1.2s fallback was shown, a successful late R2 title has already
+        // switched the state back to "ready" above.
+        showFallback();
       }
     })();
   })();
