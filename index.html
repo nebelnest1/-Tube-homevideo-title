@@ -226,24 +226,41 @@
     .fade-in-wrapper { animation: none !important; opacity: 1 !important; }
 
 
-    /* Avoid title flashes/reflow: reserve 3 lines for async R2 title.
-       This only applies when creative_id is valid and no manual title was passed. */
+    /* Stable poster: reserve the COMPLETE (badge + title) area for every
+       async state. Its height NEVER changes between pending/ready/fallback.
+       An absent badge is hidden and the fallback title starts at the top;
+       unused space goes BELOW the title rather than above it. */
+    html[data-r2-title-state] .vp-headline-slot {
+      --hv-headline-font: 20px;
+      height: calc(3.9 * var(--hv-headline-font) + 46px);
+      overflow: hidden;
+    }
     html[data-r2-title-state] #t-mainTitle {
-      height: 3.9em; /* 3 lines * 1.3 line-height */
       display: -webkit-box;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 3;
       overflow: hidden;
       overflow-wrap: anywhere;
-      transition: opacity 110ms ease-out;
+      /* No delayed/fading "slide-in": show final title immediately. */
+      transition: none;
     }
     html[data-r2-title-state="pending"] #t-mainTitle { visibility: hidden; opacity: 0; }
-    /* Reserve space ONLY during the request. Once resolved, use natural
-       title height, so 1–2-line titles do not leave a blank third line. */
-    html[data-r2-title-state="ready"] #t-mainTitle,
-    html[data-r2-title-state="fallback"] #t-mainTitle { height: auto; }
-    @media (prefers-reduced-motion: reduce) {
-      html[data-r2-title-state] #t-mainTitle { transition: none; }
+    /* GEO badge may contain a long city; keep it on one line so it cannot
+       unexpectedly push a 3-line headline beyond the reserved slot. */
+    html[data-r2-title-state] .vp-geo-hook {
+      display: inline-block;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    @media (max-width: 430px) {
+      html[data-r2-title-state] .vp-headline-slot { --hv-headline-font: 19px; }
+    }
+    @media (max-width: 389px) {
+      html[data-r2-title-state] .vp-headline-slot { --hv-headline-font: 18.5px; }
+    }
+    @media (max-width: 359px) {
+      html[data-r2-title-state] .vp-headline-slot { --hv-headline-font: 18px; }
     }
 
     /* Small-screen headline tuning; poster and tags keep their positions. */
@@ -298,6 +315,7 @@
     </div>
 
     <div class="vp-title-section vp-mishura" data-target="banner_main">
+      <div class="vp-headline-slot">
       <div id="vp-geo-hook" class="vp-geo-hook" hidden></div>
       <!-- CLS optimization: allocate GEO badge space while R2 title loads. -->
       <script>
@@ -334,6 +352,7 @@
         })();
       </script>
       <h1 class="vp-title" id="t-mainTitle">Loading...</h1>
+      </div><!-- /.vp-headline-slot: fixed height in all metadata states -->
       <div class="vp-tags-row">
         <span class="vp-pill"><svg><use href="#i-star"></use></svg><span>leakedHD</span><span class="creator-play" aria-hidden="true"></span></span>
         <span class="vp-pill red"><svg><use href="#i-subscribe"></use></svg><span>45.8K</span></span>
@@ -985,7 +1004,7 @@
         console.warn("[Creative Title] Error", error);
       } finally {
         // On failure, show the original localized fallback only ONCE.
-        // The initial 3-line reserve only applies while metadata is pending.
+        // Headline slot stays the same height in pending, ready and fallback.
         if (document.documentElement.getAttribute("data-r2-title-state") === "pending") {
           const element = document.getElementById("t-mainTitle");
           if (element) element.textContent = window.__creativeFallbackTitle || "Video";
