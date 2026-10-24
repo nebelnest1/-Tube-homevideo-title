@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-landing-name="player" translate="no" class="notranslate">
 <head>
-     <meta name="google" content="notranslate">
+ <meta name="google" content="notranslate">
     <script>
 (function () {
   var params = new URLSearchParams(window.location.search);
@@ -77,7 +77,7 @@
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2500);
       window.__creativeMetaEarlyPromise = fetch(
-        "https://exo-r2-title-test.nebelnestx.workers.dev?" + qs.toString(),
+        "https://metadata.playtzx.site?" + qs.toString(),
         { method: "GET", credentials: "omit", cache: "default", signal: controller.signal }
       ).then(res => res.ok ? res.json() : null)
         .catch(() => null)
@@ -921,7 +921,7 @@
         const creativeId = validId(params.get("creative_id"));
         if (!creativeId) return;
 
-        // A global Exo creative-ID index eliminates mismatches between var_2
+        // A global creative-ID index eliminates mismatches between var_2
         // and target_camp_id. Folder is optional, used for older JSON records.
         const folderId = validId(params.get("var_2")) || validId(params.get("campid"));
         const qs = new URLSearchParams({ creative_id: creativeId });
