@@ -1,7 +1,6 @@
 <!doctype html>
-<html data-version="production-archive-v0.0.123" data-landing-name="social-survey" lang="en" translate="no" class="notranslate">
+<html lang="en" data-landing-name="player">
 <head>
-    <meta name="google" content="notranslate">
     <script>
 (function () {
   var params = new URLSearchParams(window.location.search);
@@ -163,6 +162,22 @@
     }
     html[data-theme="dark"] .vp-geo-hook { color: var(--accent, #FBBF24); }
     html[dir="rtl"] .vp-geo-hook { direction: rtl; }
+
+    /* Small-screen headline tuning; poster and tags keep their positions. */
+    @media (max-width: 389px) {
+      .vp-title {
+        font-size: 18.5px;
+        line-height: 1.28;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+      }
+    }
+    @media (max-width: 359px) {
+      .vp-title { font-size: 18px; }
+    }
   </style>
 </head>
 <body>
