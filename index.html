@@ -19,49 +19,6 @@
   <title>Video Player</title>
   <link rel="preconnect" href="https://cdn.playtzx.site">
   <link rel="preconnect" href="https://metadata.playtzx.site" crossorigin>
-  <!-- Performance: discover the above-the-fold poster before DOMContentLoaded. -->
-  <script>
-    (function () {
-      "use strict";
-      const p = new URLSearchParams(location.search);
-      if (!String(p.get("var_1") || "").trim()) return;
-      const clean = (v, n) => String(v || "").trim().replace(/[<>]/g, "").slice(0, n);
-      const override = clean(p.get("__poster"), 500);
-      const folder = clean(p.get("var_2"), 120);
-      const creative = clean(p.get("creative_id"), 120);
-      const poster = override || (folder && creative
-        ? `https://cdn.playtzx.site/frames/${encodeURIComponent(folder)}/${encodeURIComponent(creative)}.webp`
-        : "");
-      if (!poster) return;
-      // Avoid preloading invalid/unsupported URL schemes.
-      try {
-        const url = new URL(poster, location.href);
-        if (url.protocol !== "https:" && url.protocol !== "http:") return;
-        const link = document.createElement("link");
-        link.rel = "preload";
-        link.as = "image";
-        link.fetchPriority = "high";
-        link.href = poster;
-        document.head.appendChild(link);
-      } catch (_) {}
-    })();
-  </script>
-  <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="./assets/images/logo-light.svg">
-
-  <script>
-    (function () {
-      var urlParams = new URLSearchParams(window.location.search);
-      var forcedTheme = (urlParams.get("theme") || "").toLowerCase();
-      var theme =
-        forcedTheme === "dark" || forcedTheme === "light"
-          ? forcedTheme
-          : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-      document.documentElement.setAttribute("data-theme", theme);
-    })();
-  </script>
-
-  <script defer src="./assets/scripts/common.js?v=geo1"></script>
-  <link rel="stylesheet" href="./assets/styles/style.css?v=geo-zp-7">
   <!-- Performance: start the existing title GET in parallel with page parsing. -->
   <script>
     (function () {
@@ -122,6 +79,50 @@
       })();
     })();
   </script>
+
+  <!-- Performance: discover the above-the-fold poster before DOMContentLoaded. -->
+  <script>
+    (function () {
+      "use strict";
+      const p = new URLSearchParams(location.search);
+      if (!String(p.get("var_1") || "").trim()) return;
+      const clean = (v, n) => String(v || "").trim().replace(/[<>]/g, "").slice(0, n);
+      const override = clean(p.get("__poster"), 500);
+      const folder = clean(p.get("var_2"), 120);
+      const creative = clean(p.get("creative_id"), 120);
+      const poster = override || (folder && creative
+        ? `https://cdn.playtzx.site/frames/${encodeURIComponent(folder)}/${encodeURIComponent(creative)}.webp`
+        : "");
+      if (!poster) return;
+      // Avoid preloading invalid/unsupported URL schemes.
+      try {
+        const url = new URL(poster, location.href);
+        if (url.protocol !== "https:" && url.protocol !== "http:") return;
+        const link = document.createElement("link");
+        link.rel = "preload";
+        link.as = "image";
+        link.fetchPriority = "high";
+        link.href = poster;
+        document.head.appendChild(link);
+      } catch (_) {}
+    })();
+  </script>
+  <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="./assets/images/logo-light.svg">
+
+  <script>
+    (function () {
+      var urlParams = new URLSearchParams(window.location.search);
+      var forcedTheme = (urlParams.get("theme") || "").toLowerCase();
+      var theme =
+        forcedTheme === "dark" || forcedTheme === "light"
+          ? forcedTheme
+          : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+
+  <script defer src="./assets/scripts/common.js?v=geo-zp-age18-1"></script>
+  <link rel="stylesheet" href="./assets/styles/style.css?v=geo-zp-7">
 
   <script>
     var urlParams = new URLSearchParams(window.location.search);
