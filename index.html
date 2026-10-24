@@ -17,6 +17,33 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>Video Player</title>
   <link rel="preconnect" href="https://cdn.playtzx.site">
+  <!-- Performance: discover the above-the-fold poster before DOMContentLoaded. -->
+  <script>
+    (function () {
+      "use strict";
+      const p = new URLSearchParams(location.search);
+      if (!String(p.get("var_1") || "").trim()) return;
+      const clean = (v, n) => String(v || "").trim().replace(/[<>]/g, "").slice(0, n);
+      const override = clean(p.get("__poster"), 500);
+      const folder = clean(p.get("var_2"), 120);
+      const creative = clean(p.get("creative_id"), 120);
+      const poster = override || (folder && creative
+        ? `https://cdn.playtzx.site/frames/${encodeURIComponent(folder)}/${encodeURIComponent(creative)}.webp`
+        : "");
+      if (!poster) return;
+      // Avoid preloading invalid/unsupported URL schemes.
+      try {
+        const url = new URL(poster, location.href);
+        if (url.protocol !== "https:" && url.protocol !== "http:") return;
+        const link = document.createElement("link");
+        link.rel = "preload";
+        link.as = "image";
+        link.fetchPriority = "high";
+        link.href = poster;
+        document.head.appendChild(link);
+      } catch (_) {}
+    })();
+  </script>
   <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="./assets/images/logo-light.svg">
 
   <script>
@@ -28,6 +55,32 @@
           ? forcedTheme
           : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
       document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+
+  <script defer src="./assets/scripts/common.js?v=geo-zp-age18-1"></script>
+  <link rel="stylesheet" href="./assets/styles/style.css?v=geo-zp-7">
+  <!-- Performance: start the existing title GET in parallel with page parsing. -->
+  <script>
+    (function () {
+      "use strict";
+      const p = new URLSearchParams(location.search);
+      if (!String(p.get("var_1") || "").trim()) return;
+      const rawTitle = p.get("title");
+      if (rawTitle && rawTitle.replace(/[\u0000-\u001F\u007F<>]/g, " ").trim()) return;
+      const id = String(p.get("creative_id") || "").trim();
+      if (!/^[a-zA-Z0-9_-]{1,120}$/.test(id)) return;
+      const folderValue = String(p.get("var_2") || p.get("campid") || "").trim();
+      const qs = new URLSearchParams({ creative_id: id });
+      if (/^[a-zA-Z0-9_-]{1,120}$/.test(folderValue)) qs.set("target_camp_id", folderValue);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 2500);
+      window.__creativeMetaEarlyPromise = fetch(
+        "https://exo-r2-title-test.nebelnestx.workers.dev?" + qs.toString(),
+        { method: "GET", credentials: "omit", cache: "default", signal: controller.signal }
+      ).then(res => res.ok ? res.json() : null)
+        .catch(() => null)
+        .finally(() => clearTimeout(timer));
     })();
   </script>
 
@@ -140,7 +193,7 @@
       document.documentElement.setAttribute("data-agegate", "off");
     }
   </script>
-  <link rel="stylesheet" href="./assets/styles/style.css?v=geo-zp-7">
+
   <style>
     /* Geo hook: visible only when a custom creative title is actually displayed. */
     .vp-geo-hook[hidden] { display: none !important; }
@@ -162,6 +215,10 @@
     }
     html[data-theme="dark"] .vp-geo-hook { color: var(--accent, #FBBF24); }
     html[dir="rtl"] .vp-geo-hook { direction: rtl; }
+
+    /* Performance: render content immediately; no 350 ms page reveal delay. */
+    .fade-in-wrapper { animation: none !important; opacity: 1 !important; }
+
 
     /* Small-screen headline tuning; poster and tags keep their positions. */
     @media (max-width: 389px) {
@@ -266,10 +323,10 @@
     </div>
 
     <div class="vp-related-grid vp-mishura" data-target="banner_main">
-      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/1.webp" alt="Related 1"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>03:06</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">2K views</span></div></div>
-      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/2.webp" alt="Related 2"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:39</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">39.2K views</span></div></div>
-      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/3.webp" alt="Related 3"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>15:12</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">112K views</span></div></div>
-      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/4.webp" alt="Related 4"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:19</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">3.1M views</span></div></div>
+      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/1.webp" alt="Related 1" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>03:06</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">2K views</span></div></div>
+      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/2.webp" alt="Related 2" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:39</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">39.2K views</span></div></div>
+      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/3.webp" alt="Related 3" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>15:12</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">112K views</span></div></div>
+      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/4.webp" alt="Related 4" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:19</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">3.1M views</span></div></div>
     </div>
   </div>
 
@@ -831,14 +888,19 @@
         const folderId = validId(params.get("var_2")) || validId(params.get("campid"));
         const qs = new URLSearchParams({ creative_id: creativeId });
         if (folderId) qs.set("target_camp_id", folderId);
-        const abort = new AbortController();
-        const timeout = setTimeout(() => abort.abort(), 2500);
         try {
-          const res = await fetch(CREATIVE_META_ENDPOINT + "?" + qs, {
-            method: "GET", credentials: "omit", cache: "default", signal: abort.signal
-          });
-          if (!res.ok) return;
-          const data = await res.json();
+          const data = window.__creativeMetaEarlyPromise
+            ? await window.__creativeMetaEarlyPromise
+            : await (async () => {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 2500);
+                try {
+                  const res = await fetch(CREATIVE_META_ENDPOINT + "?" + qs, {
+                    method: "GET", credentials: "omit", cache: "default", signal: controller.signal
+                  });
+                  return res.ok ? await res.json() : null;
+                } finally { clearTimeout(timer); }
+              })();
           const title = validTitle(data && data.title);
           if (!title) return;
           const element = document.getElementById("t-mainTitle");
@@ -849,8 +911,6 @@
           console.info("[Creative Title] Applied", { creativeId });
         } catch (error) {
           console.debug("[Creative Title] Fallback", error.message);
-        } finally {
-          clearTimeout(timeout);
         }
         // Failed lookup leaves the unchanged decoded GEO title in place.
       } catch (error) {
@@ -859,6 +919,6 @@
     }, { once: true });
   })();
 </script>
-  <script defer src="./assets/scripts/common.js?v=geo-zp-age18-1"></script>
+
 </body>
 </html>
