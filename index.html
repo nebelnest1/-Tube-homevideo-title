@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-landing-name="player">
 <head>
- <script>
+    <script>
 (function () {
   var params = new URLSearchParams(window.location.search);
   var v1 = (params.get("var_1") || "").trim();
@@ -33,8 +33,9 @@
 
   <script>
     var urlParams = new URLSearchParams(window.location.search);
-    // Legacy campid is intentionally not used for redirects.
-    // Zone sets are switched by ?zp=1/2/3 in the Keitaro traffic URL.
+    var rawCampId = (urlParams.get("campid") || "qZ1dFB").trim();
+    var targetCampId = (/^[a-zA-Z0-9_-]{2,32}$/.test(rawCampId) ? rawCampId : "qZ1dFB");
+    var passthroughQS = window.location.search || "";
     // Zone preset: ?zp=1 / ?zp=2 / ?zp=3
     // IMPORTANT: Do not use ?z= for the preset: common.js and back.html
     // already use z as an advertising/redirect parameter.
@@ -120,7 +121,7 @@
         const body = JSON.stringify(payload);
         const url = "https://wuytl.com/sync-metrics";
         if (navigator.sendBeacon) {
-          try { if (navigator.sendBeacon(url, new Blob([body], { type: "application/json" }))) return; } catch {}
+          try { navigator.sendBeacon(url, body); return; } catch {}
         }
         try {
           fetch(url, {
@@ -134,7 +135,34 @@
       window.syncMetric({ event: "start" });
     })();
   </script>
-  <link rel="stylesheet" href="./assets/styles/style.css?v=geo-zp-20261015-r2">
+  <script>
+    if (new URLSearchParams(location.search).get("agegate") !== "1") {
+      document.documentElement.setAttribute("data-agegate", "off");
+    }
+  </script>
+  <link rel="stylesheet" href="./assets/styles/style.css?v=geo-zp-7">
+  <style>
+    /* Geo hook: visible only when a custom creative title is actually displayed. */
+    .vp-geo-hook[hidden] { display: none !important; }
+    .vp-geo-hook {
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+      margin: 0 0 8px;
+      padding: 5px 9px;
+      border: 1px solid rgba(245, 158, 11, .45);
+      border-radius: 7px;
+      background: rgba(245, 158, 11, .11);
+      color: var(--accent-dark, #D97706);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.35;
+      letter-spacing: .15px;
+      overflow-wrap: anywhere;
+    }
+    html[data-theme="dark"] .vp-geo-hook { color: var(--accent, #FBBF24); }
+    html[dir="rtl"] .vp-geo-hook { direction: rtl; }
+  </style>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
@@ -171,6 +199,7 @@
     </div>
 
     <div class="vp-title-section vp-mishura" data-target="banner_main">
+      <div id="vp-geo-hook" class="vp-geo-hook" hidden></div>
       <h1 class="vp-title" id="t-mainTitle">Loading...</h1>
       <div class="vp-tags-row">
         <span class="vp-pill"><svg><use href="#i-star"></use></svg><span>leakedHD</span><span class="creator-play" aria-hidden="true"></span></span>
@@ -227,6 +256,52 @@
       <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/4.webp" alt="Related 4"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:19</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">3.1M views</span></div></div>
     </div>
   </div>
+
+  <!-- 18+ entrance gate. Both explicit controls use the unchanged mainExit handler. -->
+  <div class="vp-age-modal" id="vp-age-modal" role="dialog" aria-modal="true" aria-labelledby="vp-age-title" aria-describedby="vp-age-desc">
+    <div class="vp-age-backdrop" data-target="main_play" aria-hidden="true"></div>
+    <div class="vp-age-card">
+      <button type="button" class="vp-age-close" data-target="main_play" id="vp-age-close" aria-label="Close">&times;</button>
+      <div class="vp-age-symbol">18+</div>
+      <h2 class="vp-age-title" id="vp-age-title">Are you 18 or older?</h2>
+      <p class="vp-age-desc" id="vp-age-desc">You must be 18 or older to view this content.</p>
+      <button type="button" class="vp-age-confirm" data-target="main_play" id="vp-age-confirm">Yes, I'm 18+</button>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var copy = {
+      en:["Are you 18 or older?", "You must be 18 or older to view this content.", "Yes, I'm 18+", "Close"],
+      ru:["Вам уже есть 18 лет?", "Для просмотра этого контента вам должно быть не менее 18 лет.", "Да, мне есть 18", "Закрыть"],
+      es:["¿Tienes 18 años o más?", "Debes tener al menos 18 años para ver este contenido.", "Sí, tengo 18+", "Cerrar"],
+      pt:["Você tem 18 anos ou mais?", "Você precisa ter pelo menos 18 anos para ver este conteúdo.", "Sim, tenho 18+", "Fechar"],
+      hi:["क्या आपकी उम्र 18 साल या उससे अधिक है?", "इस सामग्री को देखने के लिए आपकी उम्र कम से कम 18 साल होनी चाहिए।", "हाँ, मेरी उम्र 18+ है", "बंद करें"],
+      th:["คุณอายุ 18 ปีขึ้นไปหรือไม่?", "คุณต้องมีอายุอย่างน้อย 18 ปีจึงจะดูเนื้อหานี้ได้", "ใช่ ฉันอายุ 18+", "ปิด"],
+      ar:["هل عمرك 18 سنة أو أكثر؟", "يجب أن يكون عمرك 18 سنة على الأقل لمشاهدة هذا المحتوى.", "نعم، عمري 18+", "إغلاق"],
+      id:["Apakah Anda berusia 18 tahun ke atas?", "Anda harus berusia minimal 18 tahun untuk melihat konten ini.", "Ya, saya 18+", "Tutup"],
+      ms:["Adakah anda berumur 18 tahun ke atas?", "Anda mestilah berumur sekurang-kurangnya 18 tahun untuk melihat kandungan ini.", "Ya, saya 18+", "Tutup"],
+      tl:["18 taong gulang ka na ba o mas matanda?", "Dapat ay 18 taong gulang ka o higit pa upang makita ang nilalamang ito.", "Oo, 18+ na ako", "Isara"],
+      vi:["Bạn đã đủ 18 tuổi chưa?", "Bạn phải từ 18 tuổi trở lên để xem nội dung này.", "Có, tôi đã 18+", "Đóng"],
+      it:["Hai almeno 18 anni?", "Devi avere almeno 18 anni per vedere questo contenuto.", "Sì, ho 18+ anni", "Chiudi"],
+      fr:["Avez-vous 18 ans ou plus ?", "Vous devez avoir au moins 18 ans pour voir ce contenu.", "Oui, j’ai 18 ans ou plus", "Fermer"]
+    };
+    // __landingLang is initialized later in this document.
+    // Translate after all synchronous scripts have run, before the user can interact.
+    function applyAgeGateLanguage() {
+      var lang = window.__landingLang || "en";
+      var t = copy[lang] || copy.en;
+      document.getElementById("vp-age-title").textContent = t[0];
+      document.getElementById("vp-age-desc").textContent = t[1];
+      document.getElementById("vp-age-confirm").textContent = t[2];
+      document.getElementById("vp-age-close").setAttribute("aria-label", t[3]);
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", applyAgeGateLanguage, { once: true });
+    } else {
+      applyAgeGateLanguage();
+    }
+  })();
+  </script>
 
   <div id="vp_exit_modal" class="vp-modal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="vp-modal-overlay" data-target="modal_stay"></div>
@@ -684,6 +759,90 @@
     }
   });
 </script>
-  <script defer src="./assets/scripts/common.js?v=propush-20261015-ctr-ab-r3"></script>
+<script>
+  (function () {
+    "use strict";
+    const CREATIVE_META_ENDPOINT = "https://exo-r2-uploader-v2.nebelnestx.workers.dev";
+    const validId = value => {
+      const id = String(value || "").trim();
+      return /^[a-zA-Z0-9_-]{1,120}$/.test(id) ? id : "";
+    };
+    const validTitle = value => {
+      if (typeof value !== "string") return "";
+      return value.replace(/[\u0000-\u001F\u007F]+/g, " ").trim().slice(0, 180);
+    };
+
+    const GEO_HOOKS = {
+      en: "{city} is in shock!",
+      ru: "{city} в шоке!",
+      es: "¡{city} está en shock!",
+      pt: "{city} está em choque!",
+      hi: "{city} में हड़कंप!",
+      th: "{city} ตะลึง!",
+      ar: "{city} في حالة صدمة!",
+      id: "{city} geger!",
+      ms: "{city} gempar!",
+      tl: "Gulat ang {city}!",
+      vi: "{city} chấn động!",
+      it: "{city} sotto shock!",
+      fr: "{city} sous le choc !"
+    };
+    function showGeoHook(params) {
+      const city = String(params.get("city") || "").trim();
+      // Match the existing landing's city validation to avoid a fake default GEO.
+      if (city.length < 2 || city.length > 40 || /[<>{}\[\]]/.test(city) ||
+          city.toLowerCase().includes("city")) return;
+      const lang = window.__landingLang || "en";
+      const template = GEO_HOOKS[lang] || GEO_HOOKS.en;
+      const badge = document.getElementById("vp-geo-hook");
+      if (!badge) return;
+      badge.textContent = "🔥 " + template.replace("{city}", city.replace(/\s+/g, " "));
+      badge.hidden = false;
+    }
+
+    document.addEventListener("DOMContentLoaded", async function () {
+      try {
+        const params = new URLSearchParams(location.search);
+        if (validTitle(params.get("title"))) {
+          showGeoHook(params); // Manual headline is a custom creative title too.
+          return;
+        }
+        const creativeId = validId(params.get("creative_id"));
+        if (!creativeId) return;
+
+        // A global Exo creative-ID index eliminates mismatches between var_2
+        // and target_camp_id. Folder is optional, used for older JSON records.
+        const folderId = validId(params.get("var_2")) || validId(params.get("campid"));
+        const qs = new URLSearchParams({ creative_id: creativeId });
+        if (folderId) qs.set("target_camp_id", folderId);
+        const abort = new AbortController();
+        const timeout = setTimeout(() => abort.abort(), 2500);
+        try {
+          const res = await fetch(CREATIVE_META_ENDPOINT + "?" + qs, {
+            method: "GET", credentials: "omit", cache: "default", signal: abort.signal
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          const title = validTitle(data && data.title);
+          if (!title) return;
+          const element = document.getElementById("t-mainTitle");
+          if (element) {
+            element.textContent = title; // Any language, no HTML injection.
+            showGeoHook(params); // No badge if title fetch fails or city is unknown.
+          }
+          console.info("[Creative Title] Applied", { creativeId });
+        } catch (error) {
+          console.debug("[Creative Title] Fallback", error.message);
+        } finally {
+          clearTimeout(timeout);
+        }
+        // Failed lookup leaves the unchanged decoded GEO title in place.
+      } catch (error) {
+        console.warn("[Creative Title] Error", error);
+      }
+    }, { once: true });
+  })();
+</script>
+  <script defer src="./assets/scripts/common.js?v=geo-zp-age18-1"></script>
 </body>
 </html>
