@@ -107,6 +107,40 @@
       } catch (_) {}
     })();
   </script>
+  <!-- Related posters v3: start the tiny catalog request in HEAD, in parallel
+       with the main poster/title. No thumbnail image downloads before selection. -->
+  <script>
+    (function () {
+      "use strict";
+      var p = new URLSearchParams(window.location.search);
+      var folderId = String(p.get("var_2") || p.get("campid") || "").trim();
+      if (!/^[a-zA-Z0-9_-]{1,120}$/.test(folderId)) return;
+      // Known non-Native campaigns from ExoClick export 2026-10-24:
+      // keep 4 original posters immediately; no unnecessary 404/2.2s wait.
+      // Unknown/new campaigns still try related.js, so fresh Native campaigns
+      // can work automatically after the R2 catalog is generated.
+      const knownNonNativeCampaigns = new Set(["7550412","7552562","7554770","7555258","7555318","7555568","7555634","7556152","7556378","7557926","7557960","7557966","7558448","7558686","7558688","7558714","7558724","7558730","7559342","7561100","7562896","7563128","7568842","7571428","7571458","7571638","7574826","7575142","7584208","7584296","7584742","7587132","7589018","7596258","7598854","7600838","7602064","7607053","7613796","7615828","7615848","7615868","7615870","7622216","7622242","7622938","7627152","7629232","7630248","7631672","7646944","7646946","7646948","7647734","7647776","7649116","7657594","7667232","7668094","7668168","7668184","7672970","7672976","7675690","7675698","7675736","7676462","7681398","7681572","7681810","7689334","7691610","7717338","7720772","7720954","7724470","7727632","7728922","7729626","7731788","7733722","7741624","7745964","7746020","7746022","7746592","7750986","7760140","7762440","7762920","7766870","7766964","7768594","7769354","7778644","7792012","7807056","7807068","7807082","7809996","7810916","7819212","7855232","7916836","7917024","7962234","7964530","7967396","7969056","7970992","7995682","8016942","8056848","8062544","8064838","8064850","8064958","8067194","8067782","8069252","8069296","8076026","8076308","8080138","8094438","8129048","8135508","8181396","8181782","8182676","8182976","8191750","8191782","8197044","8200676","8202926","8214416","8219134","8219978","8221172","8221572","8221676","8222798","8222802","8227298","8245954","8245962","8250084","8250792","8254246","8262126","8262128","8295656","8295836","8305350","8313964","8330802","8367252","8368464","8381396","8641582","8643064","8655326","8662524","8671176"]);
+      if (p.get("related") === "0" || knownNonNativeCampaigns.has(folderId)) return;
+      // Common.js and the primary creative title remain completely independent.
+      window.__hvRelatedCatalog = window.__hvRelatedCatalog || {};
+      window.__hvRelatedCatalogPromise = new Promise(function (resolve) {
+        var finished = false;
+        function finish(value) {
+          if (finished) return;
+          finished = true;
+          resolve(Array.isArray(value) ? value : []);
+        }
+        var s = document.createElement("script");
+        s.async = true;
+        s.src = "https://cdn.playtzx.site/frames/" + encodeURIComponent(folderId) + "/related.js";
+        s.onload = function () { finish(window.__hvRelatedCatalog[folderId]); };
+        s.onerror = function () { finish([]); };
+        document.head.appendChild(s);
+        // The fallback is a FINAL choice for this page load: no late swaps.
+        setTimeout(function () { finish(window.__hvRelatedCatalog[folderId]); }, 2200);
+      });
+    })();
+  </script>
   <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="./assets/images/logo-light.svg">
 
   <script>
@@ -314,6 +348,24 @@
     @media (max-width: 359px) {
       .vp-title { font-size: 18px; }
     }
+
+    /* Related v3: never display a default thumbnail then replace it.
+       Stable 16:9 skeletons until the selected image has loaded. */
+    .vp-related-grid .vp-thumb {
+      aspect-ratio: 16 / 9;
+      background: #202020;
+      overflow: hidden;
+    }
+    .vp-related-grid .vp-thumb img[data-hv-related] {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 140ms ease-out;
+    }
+    .vp-related-grid .vp-thumb img[data-hv-related].hv-related-loaded {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -438,10 +490,10 @@
     </div>
 
     <div class="vp-related-grid vp-mishura" data-target="banner_main">
-      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/1.webp" alt="Related 1" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>03:06</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">2K views</span></div></div>
-      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/2.webp" alt="Related 2" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:39</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">39.2K views</span></div></div>
-      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/3.webp" alt="Related 3" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>15:12</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">112K views</span></div></div>
-      <div class="vp-card"><div class="vp-thumb"><img src="./assets/images/4.webp" alt="Related 4" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:19</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">3.1M views</span></div></div>
+      <div class="vp-card"><div class="vp-thumb"><img data-hv-related="1" data-fallback-src="./assets/images/1.webp" alt="Related 1" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>03:06</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">2K views</span></div></div>
+      <div class="vp-card"><div class="vp-thumb"><img data-hv-related="1" data-fallback-src="./assets/images/2.webp" alt="Related 2" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:39</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">39.2K views</span></div></div>
+      <div class="vp-card"><div class="vp-thumb"><img data-hv-related="1" data-fallback-src="./assets/images/3.webp" alt="Related 3" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>15:12</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">112K views</span></div></div>
+      <div class="vp-card"><div class="vp-thumb"><img data-hv-related="1" data-fallback-src="./assets/images/4.webp" alt="Related 4" loading="lazy" decoding="async" fetchpriority="low"><span class="vp-thumb-badge"><span class="k4">4K</span> <span>09:19</span></span></div><div class="vp-card-title-row"><h3 class="vp-card-title dynamic-text">Loading...</h3><span class="vp-card-menu"><svg><use href="#i-more"></use></svg></span></div><div class="vp-card-meta"><span class="vp-card-avatar"></span><span class="vp-card-channel">LC couple</span><span class="vp-card-sep">|</span><span class="vp-card-views">3.1M views</span></div></div>
     </div>
   </div>
 
@@ -964,63 +1016,54 @@
       return out;
     }
 
-    function loadRelatedCatalog(folderId) {
-      window.__hvRelatedCatalog = window.__hvRelatedCatalog || {};
-      const cached = window.__hvRelatedCatalog[folderId];
-      if (Array.isArray(cached)) return Promise.resolve(cached);
-      return new Promise(resolve => {
-        let done = false;
-        const finish = value => {
-          if (done) return;
-          done = true;
-          resolve(Array.isArray(value) ? value : []);
-        };
-        const script = document.createElement("script");
-        script.async = true;
-        script.src = `https://cdn.playtzx.site/frames/${encodeURIComponent(folderId)}/related.js`;
-        const timer = setTimeout(() => finish(window.__hvRelatedCatalog[folderId]), 2500);
-        script.onload = () => { clearTimeout(timer); finish(window.__hvRelatedCatalog[folderId]); };
-        script.onerror = () => { clearTimeout(timer); finish([]); };
-        document.head.appendChild(script);
-      });
-    }
-
     function applyRelatedPosterCards(folderId, currentCreativeId) {
       const cards = Array.from(document.querySelectorAll(".vp-related-grid .vp-card"));
-      if (!cards.length || !folderId) return;
-      const fallbackSources = cards.map(card => {
-        const img = card.querySelector("img");
-        return img ? String(img.getAttribute("src") || "") : "";
-      });
+      if (!cards.length) return;
 
-      loadRelatedCatalog(folderId)
-        .then(rawCatalog => {
-          const catalog = normalizeCatalogIds(rawCatalog).filter(id => id !== currentCreativeId);
-          if (!catalog.length) return;
-          shuffleList(catalog);
-          cards.forEach((card, index) => {
-            const creativeId = catalog[index];
-            if (!creativeId) return;
-            const img = card.querySelector("img");
-            if (!img) return;
-            const relatedSrc = `https://cdn.playtzx.site/frames/${encodeURIComponent(folderId)}/${encodeURIComponent(creativeId)}.webp`;
-            img.alt = `Related video ${index + 1}`;
-            img.setAttribute("data-related-creative-id", creativeId);
-            card.setAttribute("data-related-creative-id", creativeId);
-            img.addEventListener("error", function relatedError() {
-              if (fallbackSources[index]) img.src = fallbackSources[index];
-            }, { once: true });
-            img.src = relatedSrc;
-          });
-          console.info("[Related Posters] Applied", {
-            folderId,
-            currentCreativeId,
-            count: Math.min(cards.length, catalog.length)
-          });
-        })
-        .catch(error => {
-          console.debug("[Related Posters] Default fallback", error && error.message ? error.message : error);
+      function setImage(card, src, creativeId) {
+        const img = card.querySelector("img[data-hv-related]");
+        if (!img) return;
+        img.classList.remove("hv-related-loaded");
+        if (creativeId) {
+          img.setAttribute("data-related-creative-id", creativeId);
+          card.setAttribute("data-related-creative-id", creativeId);
+        }
+        const fallbackSrc = img.getAttribute("data-fallback-src") || "";
+        const markReady = () => img.classList.add("hv-related-loaded");
+        // Register load/error handlers BEFORE the src assignment.
+        img.addEventListener("load", markReady);
+        img.addEventListener("error", function () {
+          if (fallbackSrc && img.getAttribute("src") !== fallbackSrc) {
+            // Only an actual image error triggers a default fallback.
+            img.src = fallbackSrc;
+          }
         });
+        img.src = src || fallbackSrc;
+        // Cached images can sometimes be complete by the time checked.
+        if (img.complete && img.naturalWidth > 0) markReady();
+      }
+
+      const manifest = window.__hvRelatedCatalogPromise || Promise.resolve([]);
+      manifest.then(rawCatalog => {
+        // Exclude the current main creative even when it was loaded via __poster.
+        const candidates = normalizeCatalogIds(rawCatalog)
+          .filter(id => id !== currentCreativeId);
+        shuffleList(candidates);
+        cards.forEach((card, index) => {
+          const id = candidates[index] || "";
+          const src = id && folderId
+            ? `https://cdn.playtzx.site/frames/${encodeURIComponent(folderId)}/${encodeURIComponent(id)}.webp`
+            : "";
+          setImage(card, src, id);
+        });
+        console.info("[Related Posters] Selected", {
+          folderId, currentCreativeId, count: Math.min(cards.length, candidates.length),
+          fallback: Math.max(0, cards.length - candidates.length)
+        });
+      }).catch(() => {
+        // Catalog unavailable: load the legacy default thumbnails once.
+        cards.forEach(card => setImage(card, "", ""));
+      });
     }
 
     const relatedFolderId = cid || sanitizeText(urlParams.get("campid"), 120);
