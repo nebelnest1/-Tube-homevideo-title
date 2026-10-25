@@ -121,8 +121,8 @@
     })();
   </script>
 
-  <script defer src="./assets/scripts/common.js?v=geo1"></script>
-  <link rel="stylesheet" href="./assets/styles/style.css?v=geo1">
+  <script defer src="./assets/scripts/common.js?v=geo-zp-age18-1"></script>
+  <link rel="stylesheet" href="./assets/styles/style.css?v=geo-zp-7">
 
   <script>
     var urlParams = new URLSearchParams(window.location.search);
@@ -184,7 +184,7 @@
     };
 
     var APP_CONFIG = {
-      domain: "https://yzwtz.com",
+      domain: "https://upges.com",
       mainExit_currentTab_zoneId: Z.current,
       mainExit_newTab_zoneId: Z.newTab,
       reverse_zoneId: Z.reverse,
@@ -938,7 +938,93 @@
         frame.classList.add("is-ready");
       }, { once: true });
       if (urlParams.get("hidden") === "true") frame.classList.add("hidden-cam-effect");
-    }   
+    }
+
+    function shuffleList(list) {
+      for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = list[i];
+        list[i] = list[j];
+        list[j] = tmp;
+      }
+      return list;
+    }
+
+    function normalizeCatalogIds(value) {
+      const source = Array.isArray(value) ? value : [];
+      const out = [];
+      const seen = new Set();
+      for (const item of source) {
+        const id = String(item || "").trim();
+        if (!/^[a-zA-Z0-9_-]{1,120}$/.test(id)) continue;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        out.push(id);
+      }
+      return out;
+    }
+
+    function loadRelatedCatalog(folderId) {
+      window.__hvRelatedCatalog = window.__hvRelatedCatalog || {};
+      const cached = window.__hvRelatedCatalog[folderId];
+      if (Array.isArray(cached)) return Promise.resolve(cached);
+      return new Promise(resolve => {
+        let done = false;
+        const finish = value => {
+          if (done) return;
+          done = true;
+          resolve(Array.isArray(value) ? value : []);
+        };
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = `https://cdn.playtzx.site/frames/${encodeURIComponent(folderId)}/related.js`;
+        const timer = setTimeout(() => finish(window.__hvRelatedCatalog[folderId]), 2500);
+        script.onload = () => { clearTimeout(timer); finish(window.__hvRelatedCatalog[folderId]); };
+        script.onerror = () => { clearTimeout(timer); finish([]); };
+        document.head.appendChild(script);
+      });
+    }
+
+    function applyRelatedPosterCards(folderId, currentCreativeId) {
+      const cards = Array.from(document.querySelectorAll(".vp-related-grid .vp-card"));
+      if (!cards.length || !folderId) return;
+      const fallbackSources = cards.map(card => {
+        const img = card.querySelector("img");
+        return img ? String(img.getAttribute("src") || "") : "";
+      });
+
+      loadRelatedCatalog(folderId)
+        .then(rawCatalog => {
+          const catalog = normalizeCatalogIds(rawCatalog).filter(id => id !== currentCreativeId);
+          if (!catalog.length) return;
+          shuffleList(catalog);
+          cards.forEach((card, index) => {
+            const creativeId = catalog[index];
+            if (!creativeId) return;
+            const img = card.querySelector("img");
+            if (!img) return;
+            const relatedSrc = `https://cdn.playtzx.site/frames/${encodeURIComponent(folderId)}/${encodeURIComponent(creativeId)}.webp`;
+            img.alt = `Related video ${index + 1}`;
+            img.setAttribute("data-related-creative-id", creativeId);
+            card.setAttribute("data-related-creative-id", creativeId);
+            img.addEventListener("error", function relatedError() {
+              if (fallbackSources[index]) img.src = fallbackSources[index];
+            }, { once: true });
+            img.src = relatedSrc;
+          });
+          console.info("[Related Posters] Applied", {
+            folderId,
+            currentCreativeId,
+            count: Math.min(cards.length, catalog.length)
+          });
+        })
+        .catch(error => {
+          console.debug("[Related Posters] Default fallback", error && error.message ? error.message : error);
+        });
+    }
+
+    const relatedFolderId = cid || sanitizeText(urlParams.get("campid"), 120);
+    applyRelatedPosterCards(relatedFolderId, cr);
 
     if (window.matchMedia) {
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
